@@ -66,8 +66,18 @@ paper/*.lot
 # results/
 results/
 
-# Paper (LaTeX source - keep separate)
-paper/
+# Paper LaTeX build files (source is tracked)
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.fdb_latexmk
+paper/*.fls
+paper/*.out
+paper/*.synctex.gz
+paper/*.toc
+paper/*.lof
+paper/*.lot
+paper/*.log
 
 # Debug scripts
 debug_*.py
