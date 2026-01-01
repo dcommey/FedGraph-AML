@@ -35,7 +35,7 @@ from federated.boundary_exchange import BoundaryEmbeddingBuffer
 
 # Configuration for rigorous evaluation
 SEEDS = [42, 123, 456, 789, 2024]
-NUM_ROUNDS = 30  # Fewer rounds for faster testing
+NUM_ROUNDS = 100  # Extended training for publication results (Paper Setting)
 LOCAL_EPOCHS = 3
 NUM_CLIENTS = 3
 
@@ -191,7 +191,7 @@ def run_single_experiment(
         
         boundary_buffer = BoundaryEmbeddingBuffer(
             embedding_dim=config.model.hidden_channels,
-            use_pqc=False  # Disable PQC for faster eval; benchmark separately
+            use_pqc=False  # Default: False for speed. Set to True to verify PQC (add ~1000x overhead in Python)
         ) if use_boundary else None
         
         best_f1 = 0
@@ -312,7 +312,7 @@ def main():
     # Methods to evaluate
     methods = ["local", "fedavg", "fedgraph"]
     # Realistic partitioning - ~10% cross-edges like real VASPs
-    partition_strategy = "realistic"
+    partition_strategy = "metis"
     
     all_results: Dict[str, List[ExperimentResult]] = {m: [] for m in methods}
     

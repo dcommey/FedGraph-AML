@@ -1,87 +1,36 @@
 # Python
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
+*.pyc
+*.pyo
+*.pyd
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual Environment
-venv/
-ENV/
 env/
-.venv/
+venv/
+.env
+.venv
 
-# IDE
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# VS Code
 .vscode/
-.idea/
-*.swp
-*.swo
-*~
 
-# Jupyter
-.ipynb_checkpoints/
-*.ipynb
-
-# Data (large files - download from Kaggle)
-data/elliptic_bitcoin_dataset/
-data/elliptic/
-
-# Logs
-*.log
-error.log
-
-# pytest
-.pytest_cache/
-.coverage
-htmlcov/
-
-# LaTeX build files
-paper/*.aux
-paper/*.bbl
-paper/*.blg
-paper/*.fdb_latexmk
-paper/*.fls
-paper/*.out
-paper/*.synctex.gz
-paper/*.toc
-paper/*.lof
-paper/*.lot
-
-# Keep results (important for reproducibility)
-# results/
+# Project Results & Data
 results/
+data/elliptic/
+!data/elliptic/.gitkeep
+experiments/logs/
 
-# Paper LaTeX build files (source is tracked)
+# LaTeX
 paper/*.aux
+paper/*.log
+paper/*.out
 paper/*.bbl
 paper/*.blg
-paper/*.fdb_latexmk
 paper/*.fls
-paper/*.out
+paper/*.fdb_latexmk
 paper/*.synctex.gz
-paper/*.toc
-paper/*.lof
-paper/*.lot
-paper/*.log
+paper/*.pdf
 
-# Debug scripts
-debug_*.py
-
-# OS
+# System
 .DS_Store
-Thumbs.db

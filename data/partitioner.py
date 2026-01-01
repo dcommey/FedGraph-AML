@@ -139,7 +139,14 @@ class GraphPartitioner:
             )
             
             node_assignments = torch.tensor(membership, dtype=torch.long)
-            print(f"METIS partitioning: {n_cuts} edge cuts")
+            
+            # Calculate actual cross-edge stats (pymetis n_cuts return value is unreliable)
+            src_part = node_assignments[edge_index[0]]
+            dst_part = node_assignments[edge_index[1]]
+            cross_edges = (src_part != dst_part).sum().item()
+            ratio = cross_edges / data.num_edges * 100
+            
+            print(f"METIS partitioning: {cross_edges} cross-edges ({ratio:.2f}%)")
             
             return self._create_silos(data, node_assignments)
             
