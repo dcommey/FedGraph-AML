@@ -1,60 +1,83 @@
 # FedGraph-VASP
 
-**Privacy-Preserving Federated Graph Learning with Post-Quantum Security for Cross-Institutional Anti-Money Laundering**
+Public code release for FedGraph-VASP, a privacy-preserving federated graph learning framework for cross-institutional anti-money laundering.
 
-FedGraph-VASP is a federated learning framework enabling Virtual Asset Service Providers (VASPs) to collaboratively detect money laundering patterns without sharing raw transaction data. It addresses the "cross-chain blind spot" by exchanging encrypted boundary embeddings, secured against future quantum threats using a hybrid Kyber-512 + AES-256-GCM tunnel.
+FedGraph-VASP allows collaborating Virtual Asset Service Providers (VASPs) to train graph models without sharing raw transaction data. The framework combines boundary embedding exchange with a post-quantum secure tunnel based on Kyber-512 and AES-256-GCM.
 
-## Key Features
+## What this repository includes
 
--   **Boundary Embedding Exchange**: Shares compressed, non-invertible topological information for cross-silo edges.
--   **Post-Quantum Security**: Implements NIST-standardized ML-KEM (Kyber-512) for long-term data protection.
--   **Privacy-First**: No raw features or personally identifiable information leave the institution.
+- Federated training logic in `federated/`
+- GNN and baseline models in `models/`
+- Experiment drivers in `experiments/`
+- Data loaders and partitioning utilities in `data/`
+- Tests and configuration needed to reproduce the code workflows
 
-## Results on Elliptic Dataset
+## What is intentionally excluded from GitHub
 
-| Method | F1-Score | vs Local |
-|--------|----------|----------|
-| Local GNN | 0.48 ± 0.01 | - |
-| FedAvg | 0.63 ± 0.01 | +30% |
-| **FedGraph-VASP** | **0.63 ± 0.01** | **+30%** |
+- Raw and processed datasets under `data/elliptic/` and `data/ethereum/`
+- Generated outputs under `results/`
+- Manuscript folders, figures, and submission artifacts
+- Local virtual environments, caches, logs, and LaTeX build products
 
-*FedGraph-VASP achieves parity with centralized baselines while preserving strict data localization.*
+> The `data/` Python package is part of the source tree and contains loader code only. No dataset files are committed.
+
+## Reported snapshot
+
+| Partition | Local GNN | FedSage+ | FedAvg | **FedGraph-VASP** |
+| --------- | --------- | -------- | ------ | ------------------ |
+| Louvain (seed 42, sparse cross-silo edges) | 0.336 | 0.411 | 0.438 | **0.446** |
+| METIS (seed 42, high-connectivity reference) | 0.387 | 0.464 | 0.603 | **0.604** |
+
+In the five-seed METIS study, FedAvg ($0.626 \pm 0.008$) and FedGraph-VASP ($0.620 \pm 0.009$) were statistically indistinguishable ($p = 0.119$).
 
 ## Installation
 
 ### Prerequisites
--   Python 3.8+
--   PyTorch 1.12+
--   CUDA 11.8+ (optional, for GPU acceleration)
+
+- Python 3.8+
+- PyTorch-compatible environment
+- Optional GPU support through CUDA
 
 ### Setup
+
 ```bash
-git clone https://github.com/<your-username>/FedGraph-AML.git
+git clone https://github.com/dcommey/FedGraph-AML.git
 cd FedGraph-AML
 
-# Create virtual environment
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-pip install torch-geometric
 pip install -r requirements.txt
 ```
 
-> **Note for Linux Users:** To use METIS partitioning (recommended), install `libmetis-dev`:
-> `sudo apt-get install libmetis-dev`
-
-## Usage
+For Linux METIS support, install the system package first:
 
 ```bash
-# 1. Run rigorous evaluation (5 seeds, 50 rounds)
+sudo apt-get install libmetis-dev
+```
+
+## Dataset setup
+
+Download the third-party datasets referenced in the manuscript and place them locally in:
+
+- `data/elliptic/`
+- `data/ethereum/`
+
+## Reproducing core workflows
+
+```bash
+# Core federated run
+python experiments/run_federated.py
+
+# Multi-seed evaluation
 python experiments/rigorous_evaluation.py
 
-# 2. Generate publication figures
-python experiments/generate_figures.py
+# Privacy and PQC measurements
+python experiments/privacy_analysis.py
+python experiments/pqc_benchmark.py
 ```
 
 ## Citation
 
-Citation will be added upon acceptance.
+If the journal version is not yet available, cite the public code release:
+
+> Daniel Commey, Matilda Nkoom, Yousef Alsenani, Sena G. Hounsinou, and Garth V. Crosby. *FedGraph-AML: FedGraph-VASP implementation*. GitHub repository, 2026. <https://github.com/dcommey/FedGraph-AML>
