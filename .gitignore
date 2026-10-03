@@ -1,56 +1,24 @@
 # Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-env/
+*.py[cod]
+.venv/
 venv/
-.env
-.venv
 .pytest_cache/
 
-# Coverage / tooling
-.coverage
-htmlcov/
-build/
-dist/
-*.egg-info/
-.mypy_cache/
-.ruff_cache/
-
-# Jupyter Notebooks
-.ipynb_checkpoints
-
-# VS Code
+# Editors and OS
 .vscode/
-
-# Editors / OS
 .idea/
 .DS_Store
 
-# Local datasets and experiment outputs
+# Source data and run outputs (download and generate them locally)
 data/elliptic/
-data/ethereum/
-results/
-experiments/logs/
-.current_submission_refresh_log
-submission_refresh_*.log
+data/ibm/
+results/*
+!results/analysis/
+logs/
+figures/
 
-# Private manuscript assets
-paper/
-mdpi-paper/
-final_paper_submission.pdf
-
-# LaTeX build artifacts
-*.aux
-*.bbl
-*.bcf
-*.blg
-*.fdb_latexmk
-*.fls
-*.log
-*.out
-*.run.xml
-*.synctex.gz
-*.toc
+# Transport probe credentials
+*.key
+*.pem
+*.crt

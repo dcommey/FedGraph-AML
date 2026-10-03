@@ -52,7 +52,7 @@ class GraphPartitioner:
     This is exactly what FedGraph-AML aims to solve.
     """
     
-    def __init__(self, num_clients: int = 3, strategy: str = "temporal"):
+    def __init__(self, num_clients: int = 3, strategy: str = "temporal", seed: int = 42, resolution: float = 1.0):
         """
         Initialize the partitioner.
         
@@ -62,6 +62,8 @@ class GraphPartitioner:
         """
         self.num_clients = num_clients
         self.strategy = strategy
+        self.seed = seed
+        self.resolution = resolution
         
     def partition(self, data: Data) -> Tuple[List[SiloData], Dict]:
         """
@@ -85,6 +87,8 @@ class GraphPartitioner:
             return self._partition_stratified(data)
         elif self.strategy == "realistic":
             return self._partition_realistic(data)
+        elif self.strategy == "louvain":
+            return self._partition_louvain(data)
         else:
             raise ValueError(f"Unknown strategy: {self.strategy}")
     
@@ -128,14 +132,17 @@ class GraphPartitioner:
             edge_index = data.edge_index
             num_nodes = data.num_nodes
             
-            adjacency = [[] for _ in range(num_nodes)]
+            adjacency = [set() for _ in range(num_nodes)]
             for i in range(edge_index.shape[1]):
                 src, dst = edge_index[0, i].item(), edge_index[1, i].item()
-                adjacency[src].append(dst)
+                if src != dst:
+                    adjacency[src].add(dst)
+                    adjacency[dst].add(src)
             
             n_cuts, membership = pymetis.part_graph(
                 self.num_clients,
-                adjacency=adjacency
+                adjacency=[sorted(neighbors) for neighbors in adjacency],
+                options=pymetis.Options(seed=self.seed)
             )
             
             node_assignments = torch.tensor(membership, dtype=torch.long)
@@ -213,8 +220,29 @@ class GraphPartitioner:
         Each node is randomly assigned to a client.
         This is unrealistic but provides a baseline.
         """
-        node_assignments = torch.randint(0, self.num_clients, (data.num_nodes,))
+        node_assignments = torch.randint(0, self.num_clients, (data.num_nodes,), generator=torch.Generator().manual_seed(self.seed))
         return self._create_silos(data, node_assignments)
+
+    def _partition_louvain(self, data: Data):
+        """Label-free communities, packed into a fixed number of silos.
+
+        Run on a training-only graph for prospective experiments. Community
+        packing is a simulation, not observed institutional ownership.
+        """
+        import networkx as nx
+        graph = nx.Graph()
+        graph.add_nodes_from(range(data.num_nodes))
+        graph.add_edges_from(data.edge_index.t().tolist())
+        communities = nx.community.louvain_communities(
+            graph, seed=self.seed, resolution=self.resolution)
+        communities = sorted(communities, key=lambda c: (-len(c), min(c)))
+        assignment = torch.empty(data.num_nodes, dtype=torch.long)
+        sizes = [0] * self.num_clients
+        for community in communities:
+            client = min(range(self.num_clients), key=lambda k: (sizes[k], k))
+            assignment[list(community)] = client
+            sizes[client] += len(community)
+        return self._create_silos(data, assignment)
     
     def _partition_stratified(self, data: Data) -> Tuple[List[SiloData], Dict]:
         """
@@ -370,7 +398,7 @@ class GraphPartitioner:
             "total_edges": data.num_edges,
             "total_local_edges": total_local_edges,
             "total_cross_edges": total_cross_edges,
-            "cross_edge_ratio": total_cross_edges / data.num_edges,
+            "cross_edge_ratio": total_cross_edges / data.num_edges if data.num_edges else 0.0,
             "total_boundary_nodes": total_boundary_nodes,
             "nodes_per_silo": [s.num_nodes for s in silos],
             "edges_per_silo": [s.num_local_edges for s in silos],
@@ -416,7 +444,7 @@ class GraphPartitioner:
         )
         
         # Copy masks if they exist
-        for attr in ['train_mask', 'val_mask', 'test_mask', 'unlabeled_mask']:
+        for attr in ['train_mask', 'val_mask', 'test_mask', 'unlabeled_mask', 'train_unlabeled_mask', 'timestep']:
             if hasattr(data, attr):
                 setattr(local_data, attr, getattr(data, attr)[silo.node_mask])
         
