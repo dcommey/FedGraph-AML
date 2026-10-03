@@ -125,6 +125,7 @@ Do not put the private keys in the repository.
 
 ## Data and licenses
 
+- The code in this repository has the MIT license. See `LICENSE`.
 - The FedGCN model file comes from https://github.com/yh-yao/FedGCN at commit `378438d`. It has the MIT license in `external/FedGCN/LICENSE`.
 - The IBM data come from https://github.com/IBM/AML-Data under the CDLA-Sharing-1.0 license. The license text is in `external/CDLA-Sharing-1.0.txt`.
 - The Elliptic data come from the provider through PyTorch Geometric. The provider terms apply.
