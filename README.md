@@ -1,83 +1,135 @@
 # FedGraph-VASP
 
-Public code release for FedGraph-VASP, a privacy-preserving federated graph learning framework for cross-institutional anti-money laundering.
+This repository contains the code for the paper *FedGraph-VASP: Utility, Communication, and Recipient Exposure in Cross-Silo Transaction Screening*.
 
-FedGraph-VASP allows collaborating Virtual Asset Service Providers (VASPs) to train graph models without sharing raw transaction data. The framework combines boundary embedding exchange with a post-quantum secure tunnel based on Kyber-512 and AES-256-GCM.
+The study splits a transaction graph among three simulated owners. Each owner trains a GraphSAGE model. A coordinator sends first-layer node representations along the edges that cross owners. The study compares this exchange with FedAvg, local models, pooled models, graph-free models and a FedGCN adapter.
 
-## What this repository includes
+The study uses two data sources:
 
-- Federated training logic in `federated/`
-- GNN and baseline models in `models/`
-- Experiment drivers in `experiments/`
-- Data loaders and partitioning utilities in `data/`
-- Tests and configuration needed to reproduce the code workflows
+- IBM HI-Small, a synthetic anti-money-laundering data set. This is the primary source.
+- Elliptic, a Bitcoin transaction data set. This is an exploratory source.
 
-## What is intentionally excluded from GitHub
+## Main result
 
-- Raw and processed datasets under `data/elliptic/` and `data/ethereum/`
-- Generated outputs under `results/`
-- Manuscript folders, figures, and submission artifacts
-- Local virtual environments, caches, logs, and LaTeX build products
+| Source | Ownership | Step exchange minus FedAvg (AP) |
+|---|---|---|
+| IBM | Random | +0.0029 |
+| IBM | Louvain | −0.0050 |
+| Elliptic | Random | +0.0173 |
+| Elliptic | Louvain | +0.0033 |
 
-> The `data/` Python package is part of the source tree and contains loader code only. No dataset files are committed.
+Graph-free tree models have the highest AP on both sources. The file `results/analysis/summary.json` contains all values.
 
-## Reported snapshot
+## Repository contents
 
-| Partition | Local GNN | FedSage+ | FedAvg | **FedGraph-VASP** |
-| --------- | --------- | -------- | ------ | ------------------ |
-| Louvain (seed 42, sparse cross-silo edges) | 0.336 | 0.411 | 0.438 | **0.446** |
-| METIS (seed 42, high-connectivity reference) | 0.387 | 0.464 | 0.603 | **0.604** |
+| Folder | Contents |
+|---|---|
+| `data/` | Data loaders, temporal splits and the IBM graph construction |
+| `models/` | GraphSAGE with routed messages, MLP and the FedGCN adapter |
+| `federated/` | Message format for the authenticated transport test |
+| `experiments/` | Training, search, gates, interventions, attacks, audits and figures |
+| `scripts/` | Setup, data download and the complete run sequence |
+| `tests/` | Regression tests |
+| `external/` | The FedGCN model file (MIT license) and the CDLA data license |
+| `results/analysis/` | Per-run metrics and summaries from the 768 audited runs |
 
-In the five-seed METIS study, FedAvg ($0.626 \pm 0.008$) and FedGraph-VASP ($0.620 \pm 0.009$) were statistically indistinguishable ($p = 0.119$).
+## Requirements
 
-## Installation
+- Python 3.11
+- An NVIDIA GPU with CUDA 12.1 for training
+- PyTorch 2.4.1 and PyTorch Geometric 2.6.1
 
-### Prerequisites
+The file `requirements.txt` gives the direct dependencies. The file `requirements-lock-gpu.txt` gives the full training environment.
 
-- Python 3.8+
-- PyTorch-compatible environment
-- Optional GPU support through CUDA
+## Install
 
-### Setup
+1. Create the environment:
 
-```bash
-git clone https://github.com/dcommey/FedGraph-AML.git
-cd FedGraph-AML
+   ```bash
+   bash scripts/setup_environment.sh python3.11
+   ```
 
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-```
+2. Download the data. The IBM download uses the Kaggle API, so set up your Kaggle credentials first.
 
-For Linux METIS support, install the system package first:
+   ```bash
+   bash scripts/fetch_data.sh
+   ```
 
-```bash
-sudo apt-get install libmetis-dev
-```
+   The script stops if the IBM file hash is different from the study file.
 
-## Dataset setup
-
-Download the third-party datasets referenced in the manuscript and place them locally in:
-
-- `data/elliptic/`
-- `data/ethereum/`
-
-## Reproducing core workflows
+## Run the tests
 
 ```bash
-# Core federated run
-python experiments/run_federated.py
-
-# Multi-seed evaluation
-python experiments/rigorous_evaluation.py
-
-# Privacy and PQC measurements
-python experiments/privacy_analysis.py
-python experiments/pqc_benchmark.py
+.venv/bin/python -m pytest
 ```
 
-## Citation
+The data tests need the downloaded data.
 
-If the journal version is not yet available, cite the public code release:
+## Make the figures
 
-> Daniel Commey, Matilda Nkoom, Yousef Alsenani, Sena G. Hounsinou, and Garth V. Crosby. *FedGraph-AML: FedGraph-VASP implementation*. GitHub repository, 2026. <https://github.com/dcommey/FedGraph-AML>
+The figures use only the files in `results/analysis/`. A GPU is not necessary.
+
+```bash
+python experiments/make_manuscript_figures.py --analysis results/analysis --output figures
+```
+
+## Run the complete study
+
+The study uses two GPU hosts. The first host selects the configurations. The second host repeats the main runs with the same configurations.
+
+1. On the first GPU host, run all steps:
+
+   ```bash
+   bash scripts/run_study.sh gtx
+   ```
+
+2. Copy these four files from `results/gtx/` to the second host:
+   `elliptic-main-gate-v2.json`, `ibm-main-gate-v2.json`, `elliptic-trees-gate-v2.json` and `ibm-trees-gate-v2.json`.
+
+3. On the second GPU host, run the main grid with the copied gates:
+
+   ```bash
+   bash scripts/run_study.sh rtx path/to/gates
+   ```
+
+4. Put both result folders below one root, for example `results/study/gtx` and `results/study/rtx`.
+
+5. Make the summaries:
+
+   ```bash
+   python experiments/summarize_refinements.py --root results/study --output results/analysis
+   python experiments/summarize_refinement_secondary.py --root results/study/gtx --main-summary results/analysis/summary.json --output results/analysis
+   ```
+
+Each gate records the SHA-256 hash of the source files and the data. The runner stops if a hash changes. Do not edit the files in the gate list. If you change them, start a new study.
+
+## Run the transport test
+
+The transport test sends frozen representations between two hosts over mutual TLS 1.3.
+
+1. Make new test credentials in a private folder outside the repository:
+
+   ```bash
+   python scripts/create_transport_probe_credentials.py --directory /tmp/fedgraph-keys
+   ```
+
+2. Prepare the snapshot from a trained Elliptic checkpoint:
+
+   ```bash
+   python experiments/refinement_transport.py --mode prepare --checkpoint path/to/checkpoint
+   ```
+
+3. Start the server on the source host. Start the client on the recipient host. Use the same `--run` and `--port` values on both hosts. Give the server address with `--host`.
+
+Do not put the private keys in the repository.
+
+## Data and licenses
+
+- The code in this repository has the MIT license. See `LICENSE`.
+- The FedGCN model file comes from https://github.com/yh-yao/FedGCN at commit `378438d`. It has the MIT license in `external/FedGCN/LICENSE`.
+- The IBM data come from https://github.com/IBM/AML-Data under the CDLA-Sharing-1.0 license. The license text is in `external/CDLA-Sharing-1.0.txt`.
+- The Elliptic data come from the provider through PyTorch Geometric. The provider terms apply.
+
+This repository does not contain the raw data files.
+
+See `THIRD_PARTY_NOTICES.md` for more information.
